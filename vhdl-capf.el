@@ -1,10 +1,10 @@
-;;; vhdl-capf.el -- completion at point function (capf) for vhdl-mode
+;;; vhdl-capf.el --- Completion at point function (capf) for vhdl-mode.
 
 ;; Copyright (C) 2015 sh-ow
-
+;;
 ;; Author: sh-ow <sh-ow@users.noreply.github.com>
 ;; URL: https://github.com/sh-ow/vhdl-capf
-;; Package-Requires: ((emacs "23")
+;; Package-Requires: ((emacs "23"))
 ;; Version: 0.1
 ;; Keywords: convenience, usability, vhdl, completion
 
@@ -23,6 +23,8 @@
 ;; A copy of the GNU General Public License can be obtained from this
 ;; program's author or from the Free Software Foundation, Inc., 675 Mass Ave,
 ;; Cambridge, MA 02139, USA.
+
+;;; Code:
 
 (defconst vhdl-search-completion-buffers 3
   "If t, search in _all_ other vhdl-buffers for completions, when number,
