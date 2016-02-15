@@ -73,11 +73,11 @@ completions-list _before_ trying to fuzzy match (performance).")
       (save-excursion
 	(goto-char (point-min))
 	(while (re-search-forward regpat limit t)
-	  (setq result (buffer-substring-no-properties (match-beginning 0) (match-end 0)))
-	  ;; exclude: vhdl syntax-stuff, stuff that is in a comment, already captured stuff
-	  (when (and (not (or (member result exclude-common-vhdl-syntax) (line-is-comment)))
-		     (not (member result complist)))
-	    (push result complist)))))
+	  (let ((result (buffer-substring-no-properties (match-beginning 0) (match-end 0))))
+	    ;; exclude: vhdl syntax-stuff, stuff that is in a comment, already captured stuff
+	    (when (and (not (or (member result exclude-common-vhdl-syntax) (line-is-comment)))
+		       (not (member result complist)))
+	      (push result complist))))))
     complist))
 
 ;;;###autoload
