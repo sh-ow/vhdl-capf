@@ -4,7 +4,6 @@
 ;;
 ;; Author: sh-ow <sh-ow@users.noreply.github.com>
 ;; URL: https://github.com/sh-ow/vhdl-capf
-;; Package-Requires: ((emacs "23"))
 ;; Version: 0.1
 ;; Keywords: convenience, usability, vhdl, completion
 
