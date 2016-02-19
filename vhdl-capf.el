@@ -24,38 +24,42 @@
 ;; program's author or from the Free Software Foundation, Inc., 675 Mass Ave,
 ;; Cambridge, MA 02139, USA.
 
+;;; Commentary:
+;; VHDL-completion at point function provided by this module. Enable by just
+;; calling (vhdl-capf-enable) in your .emacs.
+
 ;;; Code:
 
-(defconst vhdl-search-completion-buffers 3
-  "If t, search in _all_ other vhdl-buffers for completions, when number,
-search in the last opened (number+1) vhdl-buffers.")
+(defconst vhdl-capf-search-vhdl-buffers-for-candidates 3
+  "If t, search in _all_ other vhdl-buffers for completions.
+When number, search in the last opened (number+1) vhdl-buffers.")
 
 (defvar vhdl-completion-cache nil
   "Cache for completion candidates per vhdl-buffer: alist with form (buffername . candidates).")
 
 (defconst exclude-common-vhdl-syntax '("signal" "variable" "downto" "to" "if" "then"
-				       "begin" "end" "in" "out" "std_logic" "std_logic_vector")
-  "Some often occuring VHDL syntax constructs to exclude from the possible
-completions-list _before_ trying to fuzzy match (performance).")
+									   "begin" "end" "in" "out" "std_logic" "std_logic_vector")
+  "Some often occuring VHDL syntax constructs to exclude from the possible completions-list.")
 
-(defun flatten (L)
-  "Convert a list of lists into a single list."
-  (if (null L)
-      nil
-    (if (atom (first L))
-	(cons (first L) (flatten (rest L)))
-      (append (flatten (first L)) (flatten (rest L))))))
+(defun flatten (l)
+  "Convert a list of lists into a single list.
+Argument L is the list to be flattened."
+  (when l
+    (if (atom (first l))
+		(cons (first l) (flatten (rest l)))
+      (append (flatten (first l)) (flatten (rest l))))))
 
 (defun get-vhdl-buffers (&optional nfirst)
-  "Returns a list with all buffers that are in vhdl major mode."
+  "Returns a list with all buffers that are in vhdl major mode.
+Optional argument NFIRST is the amount of buffers to return."
   (let ((vhdl-buffers ())
-	(cnt 0))
+		(cnt 0))
     (dolist (name (buffer-list))
       (with-current-buffer name
-	(when (and (eq major-mode 'vhdl-mode)
-		   (or (not nfirst) (<= cnt nfirst)))
-	  (setq vhdl-buffers (append vhdl-buffers (list name)))
-	  (setq cnt (+ cnt 1)))))
+		(when (and (eq major-mode 'vhdl-mode)
+				   (or (not nfirst) (<= cnt nfirst)))
+		  (setq vhdl-buffers (append vhdl-buffers (list name)))
+		  (setq cnt (+ cnt 1)))))
     vhdl-buffers))
 
 (defun line-is-comment ()
@@ -65,76 +69,76 @@ completions-list _before_ trying to fuzzy match (performance).")
     (looking-at (concat "^[\s-]*" comment-start-skip))))
 
 (defun get-vhdl-symbols (&optional limit buffer)
-  "Get all (vhdl-) symbols  of a certain buffer."
+  "Get all vhdl symbols  of a certain BUFFER.
+Optional argument LIMIT specifies the point where search for symbols shall be stopped."
   (let ((complist ())
-	(regpat "\\<[A-Za-z]+\\(\\sw\\|\\s_\\)+")
-	(whichbuffer (if (eq buffer nil) (current-buffer) buffer)))
+		(regpat "\\<[A-Za-z]+\\(\\sw\\|\\s_\\)+")
+		(whichbuffer (if (eq buffer nil) (current-buffer) buffer))
+		(result ""))
     (with-current-buffer whichbuffer
       (save-excursion
-	(goto-char (point-min))
-	(while (re-search-forward regpat limit t)
-	  (setq result (buffer-substring-no-properties (match-beginning 0) (match-end 0)))
-	  ;; exclude: vhdl syntax-stuff, stuff that is in a comment, already captured stuff
-	  (when (and (not (or (member result exclude-common-vhdl-syntax) (line-is-comment)))
-		     (not (member result complist)))
-	    (push result complist)))))
+		(goto-char (point-min))
+		(while (re-search-forward regpat limit t)
+		  (setq result (buffer-substring-no-properties (match-beginning 0) (match-end 0)))
+		  ;; exclude: vhdl syntax-stuff, stuff that is in a comment, already captured stuff
+		  (when (and (not (or (member result exclude-common-vhdl-syntax) (line-is-comment)))
+					 (not (member result complist)))
+			(push result complist)))))
     complist))
 
 ;;;###autoload
-(defun vhdl-completion-at-point ()
+(defun vhdl-capf-main ()
   "Handling the completion at point for vhdl mode."
-  (if (eq major-mode 'vhdl-mode)
-      (let* ((pos (point))
-	     ;; find the word boundary (vhdl-expressions can only follow on the chars in following regexp)
-	     (beg (if (re-search-backward "[=(,+-/\*\s-]" (line-beginning-position) t)
-		      (match-end 0)
-		    (line-beginning-position)))
-	     (end (goto-char pos)) ;; goto on purpose: search for 'beg' eventually moves cursor backwards!
-	     (table-etc (list nil
-			      (completion-table-merge
-			       vhdl-abbrev-list
-			       (let* ((vhdl-abbrevs ())
-				      (didchanges nil)
-				      (vhdl-buffers (if (eq vhdl-search-completion-buffers t)
-							(get-vhdl-buffers)
-						      (get-vhdl-buffers vhdl-search-completion-buffers))))
-				 (dotimes (idx (length vhdl-buffers))
-				   (if (not (equal (car (nth idx vhdl-completion-cache)) (nth idx vhdl-buffers)))
-				       (progn
-					 (add-to-ordered-list 'vhdl-completion-cache
-							      (cons (nth idx vhdl-buffers)
-								    (delete (buffer-substring-no-properties beg end)
-									    (get-vhdl-symbols (point-max) (nth idx vhdl-buffers))))
-							      idx)
-					 (setq didchanges t))))
-				 ;; cut the cache list, do save ram (the now deleted elements would have been updated anyway)
-				 (when (> (length vhdl-completion-cache) (length vhdl-buffers))
-				   (nbutlast vhdl-completion-cache (- (length vhdl-completion-cache) (length vhdl-buffers))))
-				 ;; if the active buffer is still the same, just do the cache update for this buffer
-				 (when (eq didchanges nil)
-				   (setcdr (car vhdl-completion-cache) (delete (buffer-substring-no-properties beg end)
-									       (get-vhdl-symbols (point-max) (nth 0 vhdl-buffers)))))
-				 (flatten
-				  (dolist (bufcomps vhdl-completion-cache vhdl-abbrevs)
-				    (push (cdr bufcomps) vhdl-abbrevs))))))))
-	(when end
-	  (let ((tail (if (null (car table-etc))
-			  (cdr table-etc)
-			(cons
-			 (if (memq (char-syntax (or (char-after end) ?\s))
-				   '(?\s ?>))
-			     (cadr table-etc)
-			   (apply-partially 'completion-table-with-terminator
-					    " " (cadr table-etc)))
-			 (cddr table-etc)))))
-	    `(,beg ,end ,@tail))))
-    nil))
+  (when (eq major-mode 'vhdl-mode)
+	(let* ((pos (point))
+		   ;; find the word boundary (vhdl-expressions can only follow on the chars in following regexp)
+		   (beg (if (re-search-backward "[=(,+-/\*\s-]" (line-beginning-position) t)
+					(match-end 0)
+				  (line-beginning-position)))
+		   (end (goto-char pos)) ;; goto on purpose: search for 'beg' eventually moves cursor backwards!
+		   (table-etc (list nil
+							(completion-table-merge
+							 vhdl-abbrev-list
+							 (let* ((vhdl-abbrevs ())
+									(didchanges nil)
+									(vhdl-buffers (if (eq vhdl-capf-search-vhdl-buffers-for-candidates t)
+													  (get-vhdl-buffers)
+													(get-vhdl-buffers vhdl-capf-search-vhdl-buffers-for-candidates))))
+							   (dotimes (idx (length vhdl-buffers))
+								 (when (not (equal (car (nth idx vhdl-completion-cache)) (nth idx vhdl-buffers)))
+								   (add-to-ordered-list 'vhdl-completion-cache
+														(cons (nth idx vhdl-buffers)
+															  (delete (buffer-substring-no-properties beg end)
+																	  (get-vhdl-symbols (point-max) (nth idx vhdl-buffers))))
+														idx)
+								   (setq didchanges t)))
+							   ;; cut the cache list, do save ram (the now deleted elements would have been updated anyway)
+							   (when (> (length vhdl-completion-cache) (length vhdl-buffers))
+								 (nbutlast vhdl-completion-cache (- (length vhdl-completion-cache) (length vhdl-buffers))))
+							   ;; if the active buffer is still the same, just do the cache update for this buffer
+							   (unless didchanges
+								 (setcdr (car vhdl-completion-cache) (delete (buffer-substring-no-properties beg end)
+																			 (get-vhdl-symbols (point-max) (nth 0 vhdl-buffers)))))
+							   (flatten
+								(dolist (bufcomps vhdl-completion-cache vhdl-abbrevs)
+								  (push (cdr bufcomps) vhdl-abbrevs))))))))
+	  (when end
+		(let ((tail (if (null (car table-etc))
+						(cdr table-etc)
+					  (cons
+					   (if (memq (char-syntax (or (char-after end) ?\s))
+								 '(?\s ?>))
+						   (cadr table-etc)
+						 (apply-partially 'completion-table-with-terminator
+										  " " (cadr table-etc)))
+					   (cddr table-etc)))))
+		  `(,beg ,end ,@tail))))))
 
 ;;;###autoload
 (defun vhdl-capf-enable ()
-  "Add vhdl-completion-at-point function to capf's when visiting a vhdl-file."
+  "Add `vhdl-completion-at-point' function to capf's when visiting a vhdl-file."
   (add-hook 'vhdl-mode-hook (lambda () (make-local-variable 'completion-at-point-functions)
-			      (add-to-list 'completion-at-point-functions 'vhdl-completion-at-point))))
+							  (add-to-list 'completion-at-point-functions 'vhdl-capf-main))))
 
 (provide 'vhdl-capf)
 
