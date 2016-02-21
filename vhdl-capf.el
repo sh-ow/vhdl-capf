@@ -33,14 +33,14 @@
   "If t, search in _all_ other vhdl-buffers for completions.
 When number, search in the last opened (number+1) vhdl-buffers.")
 
-(defvar vhdl-completion-cache nil
+(defvar vhdl-capf-completion-cache nil
   "Cache for completion candidates per vhdl-buffer: alist with form (buffername . candidates).")
 
-(defconst exclude-common-vhdl-syntax '("signal" "variable" "downto" "to" "if" "then"
-									   "begin" "end" "in" "out" "std_logic" "std_logic_vector")
+(defconst vhdl-capf-exclude-common-vhdl-syntax '("signal" "variable" "downto" "to" "if" "then"
+												  "begin" "end" "in" "out" "std_logic" "std_logic_vector")
   "Some often occuring VHDL syntax constructs to exclude from the possible completions-list.")
 
-(defun flatten (l)
+(defun vhdl-capf-flatten (l)
   "Convert a list of lists into a single list.
 Argument L is the list to be flattened."
   (when l
@@ -48,7 +48,7 @@ Argument L is the list to be flattened."
 		(cons (first l) (flatten (rest l)))
       (append (flatten (first l)) (flatten (rest l))))))
 
-(defun get-vhdl-buffers (&optional nfirst)
+(defun vhdl-capf-get-vhdl-buffers (&optional nfirst)
   "Returns a list with all buffers that are in vhdl major mode.
 Optional argument NFIRST is the amount of buffers to return."
   (let ((vhdl-buffers ())
@@ -61,13 +61,13 @@ Optional argument NFIRST is the amount of buffers to return."
 		  (setq cnt (+ cnt 1)))))
     vhdl-buffers))
 
-(defun line-is-comment ()
+(defun vhdl-capf-line-is-comment ()
   "Returns t if current line contains nothing but a comment."
   (save-excursion
     (beginning-of-line 1)
     (looking-at (concat "^[\s-]*" comment-start-skip))))
 
-(defun get-vhdl-symbols (&optional limit buffer)
+(defun vhdl-capf-get-vhdl-symbols (&optional limit buffer)
   "Get all vhdl symbols  of a certain BUFFER.
 Optional argument LIMIT specifies the point where search for symbols shall be stopped."
   (let ((complist ())
@@ -80,7 +80,7 @@ Optional argument LIMIT specifies the point where search for symbols shall be st
 		(while (re-search-forward regpat limit t)
 		  (let ((result (buffer-substring-no-properties (match-beginning 0) (match-end 0))))
 			;; exclude: vhdl syntax-stuff, stuff that is in a comment, already captured stuff
-			(when (and (not (or (member result exclude-common-vhdl-syntax) (line-is-comment)))
+			(when (and (not (or (member result vhdl-capf-exclude-common-vhdl-syntax) (vhdl-capf-line-is-comment)))
 					   (not (member result complist)))
 			  (push result complist))))))
     complist))
@@ -101,25 +101,25 @@ Optional argument LIMIT specifies the point where search for symbols shall be st
 							 (let* ((vhdl-abbrevs ())
 									(didchanges nil)
 									(vhdl-buffers (if (eq vhdl-capf-search-vhdl-buffers-for-candidates t)
-													  (get-vhdl-buffers)
-													(get-vhdl-buffers vhdl-capf-search-vhdl-buffers-for-candidates))))
+													  (vhdl-capf-get-vhdl-buffers)
+													(vhdl-capf-get-vhdl-buffers vhdl-capf-search-vhdl-buffers-for-candidates))))
 							   (dotimes (idx (length vhdl-buffers))
-								 (when (not (equal (car (nth idx vhdl-completion-cache)) (nth idx vhdl-buffers)))
-								   (add-to-ordered-list 'vhdl-completion-cache
+								 (when (not (equal (car (nth idx vhdl-capf-completion-cache)) (nth idx vhdl-buffers)))
+								   (add-to-ordered-list 'vhdl-capf-completion-cache
 														(cons (nth idx vhdl-buffers)
 															  (delete (buffer-substring-no-properties beg end)
-																	  (get-vhdl-symbols (point-max) (nth idx vhdl-buffers))))
+																	  (vhdl-capf-get-vhdl-symbols (point-max) (nth idx vhdl-buffers))))
 														idx)
 								   (setq didchanges t)))
 							   ;; cut the cache list, do save ram (the now deleted elements would have been updated anyway)
-							   (when (> (length vhdl-completion-cache) (length vhdl-buffers))
-								 (nbutlast vhdl-completion-cache (- (length vhdl-completion-cache) (length vhdl-buffers))))
+							   (when (> (length vhdl-capf-completion-cache) (length vhdl-buffers))
+								 (nbutlast vhdl-capf-completion-cache (- (length vhdl-capf-completion-cache) (length vhdl-buffers))))
 							   ;; if the active buffer is still the same, just do the cache update for this buffer
 							   (unless didchanges
-								 (setcdr (car vhdl-completion-cache) (delete (buffer-substring-no-properties beg end)
-																			 (get-vhdl-symbols (point-max) (nth 0 vhdl-buffers)))))
-							   (flatten
-								(dolist (bufcomps vhdl-completion-cache vhdl-abbrevs)
+								 (setcdr (car vhdl-capf-completion-cache) (delete (buffer-substring-no-properties beg end)
+																				   (vhdl-capf-get-vhdl-symbols (point-max) (nth 0 vhdl-buffers)))))
+							   (vhdl-capf-flatten
+								(dolist (bufcomps vhdl-capf-completion-cache vhdl-abbrevs)
 								  (push (cdr bufcomps) vhdl-abbrevs))))))))
 	  (when end
 		(let ((tail (if (null (car table-etc))
