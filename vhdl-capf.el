@@ -45,8 +45,8 @@ When number, search in the last opened (number+1) vhdl-buffers.")
 Argument L is the list to be flattened."
   (when l
     (if (atom (first l))
-		(cons (first l) (flatten (rest l)))
-      (append (flatten (first l)) (flatten (rest l))))))
+		(cons (first l) (vhdl-capf-flatten (rest l)))
+      (append (vhdl-capf-flatten (first l)) (vhdl-capf-flatten (rest l))))))
 
 (defun vhdl-capf-get-vhdl-buffers (&optional nfirst)
   "Returns a list with all buffers that are in vhdl major mode.
