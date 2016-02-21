@@ -4,7 +4,6 @@
 ;;
 ;; Author: sh-ow <sh-ow@users.noreply.github.com>
 ;; URL: https://github.com/sh-ow/vhdl-capf
-;; Package-Requires: ((emacs "23"))
 ;; Version: 0.1
 ;; Keywords: convenience, usability, vhdl, completion
 
@@ -79,11 +78,11 @@ Optional argument LIMIT specifies the point where search for symbols shall be st
       (save-excursion
 		(goto-char (point-min))
 		(while (re-search-forward regpat limit t)
-		  (setq result (buffer-substring-no-properties (match-beginning 0) (match-end 0)))
-		  ;; exclude: vhdl syntax-stuff, stuff that is in a comment, already captured stuff
-		  (when (and (not (or (member result exclude-common-vhdl-syntax) (line-is-comment)))
-					 (not (member result complist)))
-			(push result complist)))))
+		  (let ((result (buffer-substring-no-properties (match-beginning 0) (match-end 0))))
+			;; exclude: vhdl syntax-stuff, stuff that is in a comment, already captured stuff
+			(when (and (not (or (member result exclude-common-vhdl-syntax) (line-is-comment)))
+					   (not (member result complist)))
+			  (push result complist))))))
     complist))
 
 ;;;###autoload
