@@ -55,7 +55,7 @@ Optional argument NFIRST is the amount of buffers to return."
 		(cnt 0))
     (dolist (name (buffer-list))
       (with-current-buffer name
-		(when (and (eq major-mode 'vhdl-mode)
+		(when (and (derived-mode-p major-mode 'vhdl-mode)
 				   (or (not nfirst) (<= cnt nfirst)))
 		  (setq vhdl-buffers (append vhdl-buffers (list name)))
 		  (setq cnt (+ cnt 1)))))
@@ -88,7 +88,7 @@ Optional argument LIMIT specifies the point where search for symbols shall be st
 ;;;###autoload
 (defun vhdl-capf-main ()
   "Handling the completion at point for vhdl mode."
-  (when (eq major-mode 'vhdl-mode)
+  (when (derived-mode-p major-mode 'vhdl-mode)
 	(let* ((pos (point))
 		   ;; find the word boundary (vhdl-expressions can only follow on the chars in following regexp)
 		   (beg (if (re-search-backward "[=(,+-/\*\s-]" (line-beginning-position) t)
