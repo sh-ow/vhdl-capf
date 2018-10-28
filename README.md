@@ -25,7 +25,7 @@ in your .emacs file:
 
 ## Customization
 There is mainly one parameter that can be set by the user, according to his
-needs: _vhdl-search-completion-buffers_. As stated in the belonging comment,
+needs: _vhdl-capf-search-vhdl-buffers-for-candidates_. As stated in the belonging comment,
 the value of this variable controls the amount of other buffers that is being
 searched for completion candidates. In principle there are two settings: t
 and a number. If this is t ALL available buffers with the vhdl major-mode
